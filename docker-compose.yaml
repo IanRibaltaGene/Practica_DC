@@ -1,0 +1,70 @@
+##alexp
+
+##Docker comands:
+##Check docker correct: docker-compose config
+##Run docker-compose: docker-compose up
+##Bring down dockers: docker-compose down
+##Check dockers: docker ps
+##Create 4 databse instances: docker-compose up -d --scale database=4
+
+version: "3.9"
+services:
+
+########Mosquitto Broker
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:1.6.12
+    restart: always
+    volumes:
+      - .\mosquittoBroker\config:\mosquitto\config
+      - .\mosquittoBroker\config\mosquitto.conf:\mosquitto\config\mosquitto.conf
+      - .\mosquittoBroker\data:\mosquitto\data
+      - .\mosquittoBroker\log:\mosquitto\log
+      ## If linux:
+      # - ./mosquittoBroker/config:/mosquitto/config
+      # - ./mosquittoBroker/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      # - ./mosquittoBroker/data:/mosquitto/data
+      # - ./mosquittoBroker/log:/mosquitto/log
+    ports:
+      - 1883:1883
+      - 9001:9001
+
+####################KAFKA
+  # zookeeper:
+  #   image: confluentinc/cp-zookeeper:5.3.1
+  #   #platform: linux/amd64 # only for mac-os
+  #   container_name: zookeeper
+  #   environment:
+  #     ZOOKEEPER_CLIENT_PORT: 2181
+  #     ZOOKEEPER_TICK_TIME: 2000
+  # kafka:
+  #   image: confluentinc/cp-kafka:5.3.1
+  #   #platform: linux/amd64 # only for mac-os
+  #   container_name: kafka
+  #   ports: 
+  #     - 9092:9092
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     TOPIC_AUTO_CREATE: True ##I think
+
+
+####################Cloud service: MQTT subscriber, Kafka prod and sub, prod to DDBB 
+  cloud-service: 
+    container_name: cloud-service
+    build: cloud
+    ports:
+      - 9090:80
+
+#########Database timebased influxdb
+  # database:
+  #   container_name: timeDataBase
+  #   image: influxdb
+
+##########MQTT producer
+  iot-gateway:
+    build: iot-gateway
