@@ -1,11 +1,13 @@
-##alexp
+##
+##Students: Alex Pelegrina, Ian Ribalta Gené
+##Subject: Distributed Computing
+##
 
 ##Docker comands:
 ##Check docker correct: docker-compose config
 ##Run docker-compose: docker-compose up
 ##Bring down dockers: docker-compose down
 ##Check dockers: docker ps
-##Create 4 databse instances: docker-compose up -d --scale database=4
 
 version: "3.9"
 services:
@@ -50,7 +52,7 @@ services:
   #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
   #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
   #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     TOPIC_AUTO_CREATE: True ##I think
+  #     TOPIC_AUTO_CREATE: False ##I think
 
 
 ####################Cloud service: MQTT subscriber, Kafka prod and sub, prod to DDBB 
@@ -61,9 +63,9 @@ services:
       - 9090:80
 
 #########Database timebased influxdb
-  # database:
-  #   container_name: timeDataBase
-  #   image: influxdb
+  database:
+    container_name: timeDataBase
+    image: influxdb
 
 ##########MQTT producer
   iot-gateway:
