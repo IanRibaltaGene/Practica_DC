@@ -11,7 +11,7 @@ my_consumer = KafkaConsumer(
     value_deserializer=lambda x: loads(x)
 )
 my_producer = KafkaProducer(
-    bootstrap_servers=['kafka:29092'],
+    bootstrap_servers=['kafka: 29092'],
     value_serializer=lambda x: dumps(x)
     )
 m = load(open("model_trained.pkl", "rb"))
