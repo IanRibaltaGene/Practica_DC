@@ -32,64 +32,89 @@ services:
       - 9001:9001
 
 ####################KAFKA
-  # zookeeper:
-  #   image: confluentinc/cp-zookeeper:5.3.1
-  #   container_name: zookeeper
-  #   environment:
-  #     ZOOKEEPER_CLIENT_PORT: 2181
-  #     ZOOKEEPER_TICK_TIME: 2000
-  # kafka:
-  #   image: confluentinc/cp-kafka:5.3.1
-  #   #platform: linux/amd64 # only for mac-os
-  #   container_name: kafka
-  #   ports: 
-  #     - 9092:9092
-  #   environment:
-  #     KAFKA_BROKER_ID: 1
-  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-  #     KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     TOPIC_AUTO_CREATE: False ##I think
-  # 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:6.1.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      # ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka:6.1.1
+    depends_on:
+      - zookeeper
+    container_name: kafka
+    ports: 
+      - 9092:9092
+    expose:
+      - '29092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      TOPIC_AUTO_CREATE: False
+  
   ## OR
-  #   zookeeper:
-  #    image: docker.io/bitnami/zookeeper:3.8
-  #    ports:
-  #      - "2181:2181"
-  #    volumes:
-  #      - "zookeeper_data:/bitnami"
-  #    environment:
-  #      - ALLOW_ANONYMOUS_LOGIN=yes
-  #  kafka:
-  #    image: docker.io/bitnami/kafka:3.3
-  #    ports:
-  #      - "9092:9092"
-  #    volumes:
-  #      - "kafka_data:/bitnami"
-  #    environment:
-  #      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-  #      - ALLOW_PLAINTEXT_LISTENER=yes
-  #      - ALLOW_ANONYMOUS_LOGIN=yes
-  #      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
+  # zookeeper:
+  #   image: docker.io/bitnami/zookeeper:3.8
+  #   ports:
+  #     - "2181:2181"
+  #   volumes:
+  #     - "zookeeper_data:/bitnami"
+  #   environment:
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  # kafka:
+  #   image: docker.io/bitnami/kafka:3.3
+  #   ports:
+  #     - "9092:9092"
+  #   volumes:
+  #     - "kafka_data:/bitnami"
+  #   environment:
+  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+  #     - ALLOW_PLAINTEXT_LISTENER=yes
+  #     - ALLOW_ANONYMOUS_LOGIN=yes
+  #     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
+  #   depends_on:
+  #     - zookeeper
+  
+  init-kafka-topics:
+    image: confluentinc/cp-kafka:6.1.1
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server kafka:29092 --list
 
-  #    depends_on:
-  #      - zookeeper
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic analytics --replication-factor 1 --partitions 1
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic analytics_results --replication-factor 1 --partitions 1
 
-  # volumes:
-  #   zookeeper_data:
-  #     driver: local
-  #   kafka_data:
-  #     driver: local
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka:29092 --list
+      "
 
 
 ####################Cloud service: MQTT subscriber, Kafka prod and sub, prod to DDBB 
-  cloud-service: 
+  cloud-service:
     container_name: cloud-service
     build: cloud
+    depends_on:
+      mosquitto:
+        condition: service_started
+      database:
+        condition: service_started
+      init-kafka-topics:
+        condition: service_completed_successfully      
     ports:
       - 9090:80
+    links:
+      - database
 
 #########Database timebased influxdb
   database:
@@ -99,3 +124,19 @@ services:
 ##########MQTT producer
   iot-gateway:
     build: iot-gateway
+    depends_on:
+      - mosquitto
+      - cloud-service
+
+##########Analytics module
+  analytics_module:
+    build: analytics_module
+    depends_on:
+      init-kafka-topics:
+        condition: service_completed_successfully  
+
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
