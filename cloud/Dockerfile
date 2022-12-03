@@ -1,9 +1,8 @@
 FROM python:3.9.14-slim
-RUN mkdir script
-WORKDIR script
+RUN mkdir cloud
+WORKDIR cloud
 ADD requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 ADD subscribe.py subscribe.py
 ADD reciver.py reciver.py
-ADD script.sh script.sh
-CMD ["./script.sh"]
+CMD python3 -u subscribe.py & python3 -u reciver.py
