@@ -95,7 +95,7 @@ services:
 #########Database timebased influxdb
   database:
     container_name: temperatureDataBase
-    image: influxdb:latest
+    image: influxdb:2.4.0
     ports:
       - 8086:8086
     volumes:
@@ -108,7 +108,6 @@ services:
       - DOCKER_INFLUXDB_INIT_BUCKET=dc_practica
       - DOCKER_INFLUXDB_INIT_RETENTION=1w
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=ea612f89eb7e81633fc28bffd098897c
-
 
 ##########MQTT producer
   iot-gateway:

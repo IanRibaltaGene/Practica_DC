@@ -24,12 +24,21 @@ def dipack(message):
     print(sensor)
     return value, timestamp, sensor
 
+from influxdb_client.domain.write_precision import WritePrecision
+import time
 #Tag is the gateway id
-def store_to_influxdb(tag, value):
-    p = (Point("temperature_mesurement").tag("gateway", tag).field("temperature", value))
-    print(f"0----------{tag} {value}")
-    write_api.write(bucket=bucket, record=p, org=org)#No conecta :(
-    print(f"1----------{tag} {value}")
+def store_to_influxdb(tag, value, write_api, timestamp_orig):
+    timestamp = time.mktime(timestamp_orig.timetuple())*1e3 + timestamp_orig.microsecond/1e3
+    print("time -->>", timestamp)
+    print("time -->>", int(timestamp))
+    p = (Point("temperature_mesurement").tag("gateway", tag).field("temperature", value)).time(int(timestamp), WritePrecision.MS)
+    write_api.write(bucket=bucket, record=p)
+    print(f"gateway={tag} stored={value} on bucket={bucket}")
+
+def create_client():
+    clientInflux = InfluxDBClient(url=url, token=token, org=org)
+    write_api = clientInflux.write_api(write_options=SYNCHRONOUS)
+    return write_api, clientInflux
 
 def on_message(client, userdata, message):
     value, timestamp, sensor = dipack(message.payload)
@@ -37,13 +46,13 @@ def on_message(client, userdata, message):
     print("%s %s" % (message.topic, kafka_message))
     kafka_producer.send('analytics', value=kafka_message)
     #Store to influxDB
-    store_to_influxdb(sensor, value)
+    write_api, clientInflux = create_client()
+    store_to_influxdb(sensor, value, write_api, timestamp)
+    clientInflux.close()
 
 if __name__=="__main__":
     bucket = "dc_practica"
-    url = "127.0.0.1:8086"
+    url = "http://database:8086"
     token = "ea612f89eb7e81633fc28bffd098897c"
     org = "practica"
-    client = InfluxDBClient(url=url, token=token)
-    write_api = client.write_api(write_options=SYNCHRONOUS)
     subscribe.callback(on_message, "Gateway/+/temperature", hostname="host.docker.internal")
