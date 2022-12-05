@@ -9,15 +9,19 @@ token = "ea612f89eb7e81633fc28bffd098897c"
 org = "practica"
 
 from influxdb_client.domain.write_precision import WritePrecision
-def store_to_influxdb(value, write_api, timestamp):
+from datetime import datetime
+def store_to_influxdb(value, write_api, timestamp_raw):
     tag = value["sensor"]
-
-    p_yhat = Point("analytic").tag("gateway", tag).field("yhat", value["yhat"]).time(timestamp,WritePrecision.MS)
-    p_yhat_lower = Point("analytic").tag("gateway", tag).field("yhat_lower", value["yhat_lower"]).time(timestamp,WritePrecision.MS)
-    p_yhat_upper = Point("analytic").tag("gateway", tag).field("yhat_upper", value["yhat_upper"]).time(timestamp,WritePrecision.MS)
+    print()
+    timestamp = datetime.utcfromtimestamp(timestamp_raw / 1000.0)
+    print("reciver analysis utc timestamp ----> ",timestamp)
+    print()
+    p_yhat = Point("analytic").tag("gateway", tag).field("yhat", value["yhat"]).time(timestamp, WritePrecision.MS)
+    p_yhat_lower = Point("analytic").tag("gateway", tag).field("yhat_lower", value["yhat_lower"]).time(timestamp, WritePrecision.MS)
+    p_yhat_upper = Point("analytic").tag("gateway", tag).field("yhat_upper", value["yhat_upper"]).time(timestamp, WritePrecision.MS)
 
     write_api.write(bucket=bucket, record=[p_yhat, p_yhat_lower, p_yhat_upper])
-    print(f"gateway={tag} stored={value} on bucket={bucket}")
+    print(f"Values analysis of gateway={tag} stored value={value} on bucket={bucket}")
 
 def create_client():
     clientInflux = InfluxDBClient(url=url, token=token, org=org)
@@ -35,11 +39,13 @@ kafka_consumer = KafkaConsumer(
     )
 
 for data in kafka_consumer:
-    print(f"{data} is being stored")
+    print()
+    print()
+    print(f"{data} recuved from kafka and is being stored")
     to_store=data.value[0]
-    print(f"{to_store}")
     ##Store to influxdb
     write_api, client_influx = create_client()
     store_to_influxdb(to_store, write_api, data.timestamp)
     client_influx.close()
-    print("client closed")
+    print("Client closed")
+    print()
