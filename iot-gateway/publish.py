@@ -10,6 +10,9 @@ hostmachine=socket.gethostname()
 topic = "Gateway/{hostmachine}/temperature".format(hostmachine=hostmachine)
 i=0
 while True:
+    print()
+    print(f"Sending via mqtt => -value:{float(data.iloc[i%len(data),0])} -datetime:{datetime.now()} -hostmachine:{hostmachine}")
+    print()
     publish.single(topic=topic,
                    payload= f"{float(data.iloc[i%len(data),0])}~~~~~{datetime.now()}~~~~~{hostmachine}",
                    hostname="host.docker.internal")

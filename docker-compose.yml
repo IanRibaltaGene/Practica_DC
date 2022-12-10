@@ -18,14 +18,14 @@ services:
     image: eclipse-mosquitto:1.6.12
     restart: always
     volumes:
-      - .\mosquittoBroker\config:\mosquitto\config
-      - .\mosquittoBroker\config\mosquitto.conf:\mosquitto\config\mosquitto.conf
-      - .\mosquittoBroker\data:\mosquitto\data
-      - .\mosquittoBroker\log:\mosquitto\log
+      - .\mosquittoBroker\config:/mosquitto/config
+      - .\mosquittoBroker\config\mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - .\mosquittoBroker\log:/mosquitto/log
       ## If linux:
       # - ./mosquittoBroker/config:/mosquitto/config
       # - ./mosquittoBroker/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      # - ./mosquittoBroker/data:/mosquitto/data
+      # - mosquitto_data:/mosquitto/data
       # - ./mosquittoBroker/log:/mosquitto/log
     ports:
       - 1883:1883
@@ -39,7 +39,6 @@ services:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      # ZOOKEEPER_TICK_TIME: 2000
   kafka:
     image: confluentinc/cp-kafka:6.1.1
     depends_on:
@@ -57,29 +56,6 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       TOPIC_AUTO_CREATE: False
-  
-  ## OR
-  # zookeeper:
-  #   image: docker.io/bitnami/zookeeper:3.8
-  #   ports:
-  #     - "2181:2181"
-  #   volumes:
-  #     - "zookeeper_data:/bitnami"
-  #   environment:
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  # kafka:
-  #   image: docker.io/bitnami/kafka:3.3
-  #   ports:
-  #     - "9092:9092"
-  #   volumes:
-  #     - "kafka_data:/bitnami"
-  #   environment:
-  #     - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-  #     - ALLOW_PLAINTEXT_LISTENER=yes
-  #     - ALLOW_ANONYMOUS_LOGIN=yes
-  #     - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
-  #   depends_on:
-  #     - zookeeper
   
   init-kafka-topics:
     image: confluentinc/cp-kafka:6.1.1
@@ -118,8 +94,20 @@ services:
 
 #########Database timebased influxdb
   database:
-    container_name: timeDataBase
-    image: influxdb
+    container_name: temperatureDataBase
+    image: influxdb:2.4.0
+    ports:
+      - 8086:8086
+    volumes:
+      - influx_data:/var/lib/influxdb2:rw
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=usuari
+      - DOCKER_INFLUXDB_INIT_PASSWORD=123456789
+      - DOCKER_INFLUXDB_INIT_ORG=practica
+      - DOCKER_INFLUXDB_INIT_BUCKET=dc_practica
+      - DOCKER_INFLUXDB_INIT_RETENTION=1w
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=ea612f89eb7e81633fc28bffd098897c
 
 ##########MQTT producer
   iot-gateway:
@@ -140,3 +128,5 @@ volumes:
     driver: local
   kafka_data:
     driver: local
+  influx_data:
+  mosquitto_data:
